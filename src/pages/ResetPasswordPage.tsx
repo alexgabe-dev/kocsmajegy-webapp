@@ -19,19 +19,28 @@ const ResetPasswordPage: React.FC = () => {
 
   // Ellenőrizzük, hogy a felhasználó a jelszó-visszaállítási folyamat részeként érkezett-e
   useEffect(() => {
+    // Direkt ellenőrzés a komponens betöltődésekor
+    if (window.location.hash.includes('type=recovery')) {
+        console.log('Recovery hash found in URL, setting tokenFound to true.');
+        setTokenFound(true);
+    }
+
     // Supabase automatikusan kezeli a tokent az URL fragmentumból (#)
     // és beállítja a sessiont, ha érvényes. Az onAuthStateChange ezt érzékeli.
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed:', event, session);
       if (event === 'PASSWORD_RECOVERY') {
+        console.log('PASSWORD_RECOVERY event received, setting tokenFound to true.');
         setTokenFound(true);
         // A session már tartalmazza a szükséges access_tokent
       } else if (!session) {
         // Ha nincs session és nem jelszóvisszaállítás, valami nincs rendben
         // vagy lejárt a token
-        if (!tokenFound) { // Csak akkor navigáljunk, ha nem találtunk tokent az elején
-            setError('Érvénytelen vagy lejárt jelszó-visszaállító link.');
+
+        // Csak akkor navigáljunk el, ha a direkt ellenőrzés sem talált tokent
+        if (!window.location.hash.includes('type=recovery')) {
+            setError('Érvénytelen vagy lejárt jelszó-visszaállító link, vagy a munkamenet megszakadt.');
             showToast('Érvénytelen vagy lejárt jelszó-visszaállító link.', 'error');
-            // Optionally navigate away after a delay
              setTimeout(() => navigate('/auth'), 3000);
         }
       }
