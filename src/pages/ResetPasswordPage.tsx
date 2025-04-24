@@ -40,7 +40,7 @@ const ResetPasswordPage: React.FC = () => {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [navigate, showToast, tokenFound]);
+  }, [navigate, showToast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
