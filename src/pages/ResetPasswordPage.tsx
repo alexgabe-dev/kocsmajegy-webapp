@@ -19,16 +19,21 @@ const ResetPasswordPage: React.FC = () => {
 
   // Ellenőrizzük, hogy a felhasználó a jelszó-visszaállítási folyamat részeként érkezett-e
   useEffect(() => {
+    console.log('ResetPasswordPage mounted.');
+    console.log('Current URL:', window.location.href);
+    console.log('Current Hash:', window.location.hash);
+
     // Direkt ellenőrzés a komponens betöltődésekor
     if (window.location.hash.includes('type=recovery')) {
-        console.log('Recovery hash found in URL, setting tokenFound to true.');
+        console.log('Recovery hash found in URL via direct check, setting tokenFound to true.');
         setTokenFound(true);
     }
 
     // Supabase automatikusan kezeli a tokent az URL fragmentumból (#)
     // és beállítja a sessiont, ha érvényes. Az onAuthStateChange ezt érzékeli.
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session);
+      console.log('Auth state changed event:', event);
+      console.log('Auth session object:', session);
       if (event === 'PASSWORD_RECOVERY') {
         console.log('PASSWORD_RECOVERY event received, setting tokenFound to true.');
         setTokenFound(true);
