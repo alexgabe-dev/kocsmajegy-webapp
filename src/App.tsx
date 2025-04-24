@@ -20,25 +20,17 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Ellenőrizzük az URL-t jelszó-visszaállítási tokenre az elején
-    const isRecovery = window.location.hash.includes('type=recovery');
-
     // Kezdeti session lekérése
-    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
-      // Csak akkor állítjuk be a kezdeti sessiont, ha NEM vagyunk recovery módban
-      if (!isRecovery) {
-        setSession(initialSession);
-      }
-      // Itt állítjuk be a loading false-t, miután eldőlt, kell-e session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       setLoading(false);
     });
 
     // Figyeljük az auth állapot változásait
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, currentSession) => {
-        // Az eseménykezelő mindig frissítse a sessiont, a ResetPasswordPage majd kezeli a saját állapotát
-        setSession(currentSession);
-        // Itt már nem kell a setLoading(false), elég a kezdeti betöltésnél
+      (_event, session) => {
+        setSession(session);
+        setLoading(false); // Frissítjük a betöltési állapotot itt is
       }
     );
 

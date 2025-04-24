@@ -20,41 +20,41 @@ const ResetPasswordPage: React.FC = () => {
   // Ellenőrizzük, hogy a felhasználó a jelszó-visszaállítási folyamat részeként érkezett-e
   useEffect(() => {
     console.log('ResetPasswordPage mounted.');
-    console.log('Current URL:', window.location.href);
-    console.log('Current Hash:', window.location.hash);
 
-    // Direkt ellenőrzés a komponens betöltődésekor
-    if (window.location.hash.includes('type=recovery')) {
-        console.log('Recovery hash found in URL via direct check, setting tokenFound to true.');
-        setTokenFound(true);
-    }
-
-    // Supabase automatikusan kezeli a tokent az URL fragmentumból (#)
-    // és beállítja a sessiont, ha érvényes. Az onAuthStateChange ezt érzékeli.
+    // Próbáljuk meg az onAuthStateChange-re bízni
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Auth state changed event:', event);
       console.log('Auth session object:', session);
-      if (event === 'PASSWORD_RECOVERY') {
-        console.log('PASSWORD_RECOVERY event received, setting tokenFound to true.');
-        setTokenFound(true);
-        // A session már tartalmazza a szükséges access_tokent
-      } else if (!session) {
-        // Ha nincs session és nem jelszóvisszaállítás, valami nincs rendben
-        // vagy lejárt a token
 
-        // Csak akkor navigáljunk el, ha a direkt ellenőrzés sem talált tokent
-        if (!window.location.hash.includes('type=recovery')) {
-            setError('Érvénytelen vagy lejárt jelszó-visszaállító link, vagy a munkamenet megszakadt.');
-            showToast('Érvénytelen vagy lejárt jelszó-visszaállító link.', 'error');
-             setTimeout(() => navigate('/auth'), 3000);
-        }
+      // Ha van session (bármilyen esemény után közvetlenül a recovery linkről jövet), 
+      // és még nem találtunk tokent, akkor feltételezzük, hogy ez az
+      if (session && !tokenFound) { 
+          console.log(`Session found with event ${event}, assuming recovery context. Setting tokenFound = true`);
+          setTokenFound(true);
+      } else if (!session) {
+         // Ha kijelentkezés történik, vagy nincs session
+         // Itt lehetne hibaüzenet, ha a tokenFound korábban true volt, de most nincs session
+         console.log('No session found or user signed out.');
+         // Opcionálisan hiba és átirányítás, ha szükséges
+         // setError('Munkamenet megszakadt vagy érvénytelen.');
+         // setTimeout(() => navigate('/auth'), 3000);
       }
     });
 
+    // Ellenőrizzük a kezdeti sessiont is, hátha az onAuthStateChange előtt rendelkezésre áll
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        console.log('Initial session check:', session);
+        if (session && !tokenFound) {
+            console.log('Initial session found, assuming recovery context. Setting tokenFound = true');
+            setTokenFound(true);
+        }
+    });
+
     return () => {
+      console.log('ResetPasswordPage unmounting, unsubscribing.');
       authListener?.subscription.unsubscribe();
     };
-  }, [navigate, showToast]);
+  }, [navigate, showToast]); // tokenFound kivéve a függőségi listából
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
