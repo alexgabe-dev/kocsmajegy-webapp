@@ -1,41 +1,40 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Eye, EyeOff, Lock } from 'lucide-react';
+import { useToast } from '../context/ToastContext';
+import { motion } from 'framer-motion';
 
 interface PasswordChangeProps {
   onUpdatePassword?: (data: { password: string }) => void;
 }
 
-const PasswordChange: React.FC<PasswordChangeProps> = ({ onUpdatePassword }) => {
+const PasswordChange: React.FC<PasswordChangeProps> = () => {
+  const { showToast } = useToast();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    // Validation
-    if (newPassword !== confirmPassword) {
-      setError('Az új jelszó és a megerősítés nem egyezik');
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setError('Az új jelszónak legalább 6 karakter hosszúnak kell lennie');
-      return;
-    }
-
-    setLoading(true);
 
     try {
+      // Validation
+      if (newPassword !== confirmPassword) {
+        showToast('Az új jelszó és a megerősítés nem egyezik', 'error');
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        showToast('Az új jelszónak legalább 6 karakter hosszúnak kell lennie', 'error');
+        return;
+      }
+
+      setLoading(true);
+
       // First verify the current password by trying to sign in
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: (await supabase.auth.getUser()).data.user?.email || '',
@@ -43,7 +42,14 @@ const PasswordChange: React.FC<PasswordChangeProps> = ({ onUpdatePassword }) => 
       });
 
       if (signInError) {
-        throw new Error('A jelenlegi jelszó helytelen');
+        showToast('A jelenlegi jelszó helytelen', 'error');
+        return;
+      }
+
+      // Check if new password is same as current password
+      if (currentPassword === newPassword) {
+        showToast('Az új jelszó nem egyezhet meg a jelenlegi jelszóval', 'error');
+        return;
       }
 
       // Update password
@@ -52,148 +58,122 @@ const PasswordChange: React.FC<PasswordChangeProps> = ({ onUpdatePassword }) => 
       });
 
       if (updateError) {
+        if (updateError.message.includes('different from the old password')) {
+          showToast('Az új jelszó nem egyezhet meg a jelenlegi jelszóval', 'error');
+          return;
+        }
         throw updateError;
       }
 
       // Success
-      setSuccess('A jelszó sikeresen megváltozott');
+      showToast('A jelszó sikeresen megváltozott', 'success');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      
-      // Call the callback if provided
-      if (onUpdatePassword) {
-        onUpdatePassword({ password: newPassword });
-      }
     } catch (err: any) {
-      setError(err.message || 'Hiba történt a jelszó megváltoztatásakor');
+      showToast(err.message || 'Hiba történt a jelszó megváltoztatásakor', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="bg-card dark:bg-black rounded-xl shadow-md overflow-hidden border border-border dark:border-gray-800">
-      <div className="p-6">
-        <h2 className="text-xl font-semibold text-foreground mb-4">Jelszó megváltoztatása</h2>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 rounded-lg">
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Current Password */}
-          <div>
-            <label htmlFor="current-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Jelenlegi jelszó
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock size={16} className="text-gray-400" />
-              </div>
-              <input
-                id="current-password"
-                type={showCurrentPassword ? "text" : "password"}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                required
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-              >
-                {showCurrentPassword ? (
-                  <EyeOff size={16} className="text-gray-400" />
-                ) : (
-                  <Eye size={16} className="text-gray-400" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* New Password */}
-          <div>
-            <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Új jelszó
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock size={16} className="text-gray-400" />
-              </div>
-              <input
-                id="new-password"
-                type={showNewPassword ? "text" : "password"}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                required
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-              >
-                {showNewPassword ? (
-                  <EyeOff size={16} className="text-gray-400" />
-                ) : (
-                  <Eye size={16} className="text-gray-400" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm Password */}
-          <div>
-            <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Új jelszó megerősítése
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock size={16} className="text-gray-400" />
-              </div>
-              <input
-                id="confirm-password"
-                type={showConfirmPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                required
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                {showConfirmPassword ? (
-                  <EyeOff size={16} className="text-gray-400" />
-                ) : (
-                  <Eye size={16} className="text-gray-400" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium ${
-              loading ? 'opacity-70 cursor-not-allowed' : ''
-            }`}
-          >
-            {loading ? 'Folyamatban...' : 'Jelszó megváltoztatása'}
-          </button>
-        </form>
+  const PasswordInput = ({ 
+    id, 
+    label, 
+    value, 
+    onChange, 
+    showPassword, 
+    onToggleShow 
+  }: { 
+    id: string;
+    label: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    showPassword: boolean;
+    onToggleShow: () => void;
+  }) => (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {label}
+      </label>
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <Lock size={16} className="text-gray-400" />
+        </div>
+        <input
+          id={id}
+          type={showPassword ? "text" : "password"}
+          value={value}
+          onChange={onChange}
+          className="w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+          required
+        />
+        <button
+          type="button"
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          onClick={onToggleShow}
+        >
+          {showPassword ? (
+            <EyeOff size={16} />
+          ) : (
+            <Eye size={16} />
+          )}
+        </button>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <PasswordInput
+          id="current-password"
+          label="Jelenlegi jelszó"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          showPassword={showCurrentPassword}
+          onToggleShow={() => setShowCurrentPassword(!showCurrentPassword)}
+        />
+
+        <PasswordInput
+          id="new-password"
+          label="Új jelszó"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          showPassword={showNewPassword}
+          onToggleShow={() => setShowNewPassword(!showNewPassword)}
+        />
+
+        <PasswordInput
+          id="confirm-password"
+          label="Új jelszó megerősítése"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          showPassword={showConfirmPassword}
+          onToggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
+        />
+
+        <motion.button
+          type="submit"
+          disabled={loading}
+          whileTap={{ scale: 0.98 }}
+          className={`w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium flex items-center justify-center space-x-2 ${
+            loading ? 'opacity-70 cursor-not-allowed' : ''
+          }`}
+        >
+          {loading ? (
+            <>
+              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Folyamatban...</span>
+            </>
+          ) : (
+            <>
+              <Lock size={18} />
+              <span>Jelszó megváltoztatása</span>
+            </>
+          )}
+        </motion.button>
+      </form>
     </div>
   );
 };

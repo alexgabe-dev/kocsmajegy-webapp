@@ -61,6 +61,9 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({ userId, onImage
     try {
       setUploading(true);
       
+      // Get the MIME type from the file
+      const mimeType = file.type;
+      
       // Konvertáljuk a képet base64 formátumba
       const reader = new FileReader();
       
@@ -74,6 +77,7 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({ userId, onImage
             .insert({
               user_id: userId,
               image_data: base64Image,
+              mime_type: mimeType,
               updated_at: new Date().toISOString()
             });
             

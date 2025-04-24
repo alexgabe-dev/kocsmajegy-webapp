@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Restaurant, Review } from '../types';
 import { supabase } from '../lib/supabase';
+import { insertRestaurantDirect } from '../lib/direct-sql';
+import { decode } from 'base64-arraybuffer';
+
+// Import Supabase URL and anon key
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 interface AppContextType {
   restaurants: Restaurant[];
@@ -9,7 +15,7 @@ interface AppContextType {
   addRestaurant: (restaurant: Omit<Restaurant, 'id' | 'createdAt' | 'userId'>) => Promise<string | null>;
   updateRestaurant: (restaurant: Restaurant) => Promise<void>;
   deleteRestaurant: (id: string) => Promise<void>;
-  addReview: (review: Omit<Review, 'id' | 'createdAt' | 'userId'>) => Promise<void>;
+  addReview: (review: Omit<Review, 'id' | 'created_at' | 'user_id'>) => Promise<void>;
   updateReview: (review: Review) => Promise<void>;
   deleteReview: (id: string) => Promise<void>;
   getRestaurantReviews: (restaurantId: string) => Review[];
@@ -56,11 +62,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Error fetching reviews:', error);
       return [];
     }
-    return data?.map(dbReview => ({
-        ...dbReview,
-        restaurantId: dbReview.restaurant_id,
-        userId: dbReview.user_id
-    })) || [];
+
+    console.log('Raw reviews data:', data); // Debug log
+
+    const mappedReviews = data?.map((dbReview): Review => {
+      const review: Review = {
+        id: dbReview.id,
+        restaurant_id: dbReview.restaurant_id,
+        user_id: dbReview.user_id,
+        rating: dbReview.rating,
+        average_rating: dbReview.average_rating,
+        atmosphere_rating: dbReview.atmosphere_rating ?? undefined,
+        taste_rating: dbReview.taste_rating ?? undefined,
+        price_rating: dbReview.price_rating ?? undefined,
+        message: dbReview.message ?? undefined,
+        dishes: dbReview.dishes || [],
+        photos: dbReview.photos || [],
+        created_at: dbReview.created_at,
+        updated_at: dbReview.updated_at,
+        dish_prices: dbReview.dish_prices || [],
+      };
+      return review;
+    }) || [];
+
+    return mappedReviews;
   }, []);
 
   const fetchFavorites = useCallback(async () => {
@@ -214,55 +239,60 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         // Prepare data for Supabase (add user_id)
-        // Ensure required fields like name, address, price_tier are present
         const dataToInsert = {
-          ...restaurantData,
-          user_id: user.id,
-          // Ensure price_tier is a number if it comes from a form as string
+          name: restaurantData.name,
+          address: restaurantData.address,
           price_tier: Number(restaurantData.priceTier),
+          user_id: user.id,
         };
-        // Remove client-side camelCase fields if they exist and aren't in the DB table
-        delete (dataToInsert as any).priceTier;
 
+        console.log('Inserting restaurant data:', dataToInsert);
 
-        // Insert into 'restaurants' table and select the inserted row
-        const { data, error } = await supabase
-          .from('restaurants')
-          .insert(dataToInsert)
-          .select()
-          .single(); // Use single() if you expect exactly one row back
+        // Try using the direct SQL function
+        const result = await insertRestaurantDirect(
+          dataToInsert.name,
+          dataToInsert.address,
+          dataToInsert.price_tier,
+          dataToInsert.user_id
+        );
 
-        if (error) {
-          console.error('Error adding restaurant:', error);
-          alert(`Hiba történt az étterem mentésekor: ${error.message}`);
+        if (!result.success) {
+          console.error('Error adding restaurant using direct SQL:', result.error);
+          alert(`Hiba történt az étterem mentésekor: ${result.error && typeof result.error === 'object' && 'message' in result.error ? result.error.message : 'Unknown error'}`);
           return null;
         }
 
-        // Update local state with the newly added restaurant from the database response
-        if (data) {
-            // Map the database response back to the Restaurant type
-            const newRestaurant: Restaurant = {
-                ...data,
-                userId: data.user_id, // Map back to camelCase
-                priceTier: data.price_tier // Map back to camelCase
-            };
-            setRestaurants(prev => [newRestaurant, ...prev]); // Add to the beginning of the list
-            console.log('Restaurant added successfully and state updated');
-            // Close modal after successful addition using the state setter
-            if (isAddModalOpen) {
-                setIsAddModalOpen(false); // Use state setter directly
-            }
-            return newRestaurant.id; // Return the new ID
-        } else {
-            console.warn("Restaurant added but no data returned from Supabase?");
-             // Optionally refetch restaurants as a fallback
-             // await fetchRestaurants().then(setRestaurants);
-            return null;
+        // If insert was successful, fetch the latest restaurants to get the new one
+        const { data: restaurants, error: fetchError } = await supabase
+          .from('restaurants')
+          .select('*')
+          .eq('id', result.data)
+          .single();
+
+        if (fetchError) {
+          console.error('Error fetching newly added restaurant:', fetchError);
+          return null;
         }
 
+        if (restaurants) {
+          // Map the database response back to the Restaurant type
+          const mappedRestaurant: Restaurant = {
+            id: restaurants.id,
+            name: restaurants.name,
+            address: restaurants.address,
+            priceTier: restaurants.price_tier,
+            createdAt: restaurants.created_at,
+            userId: restaurants.user_id,
+          };
+          setRestaurants(prev => [mappedRestaurant, ...prev]); // Add to the beginning of the list
+          console.log('Restaurant added successfully and state updated');
+          return restaurants.id;
+        }
+        
+        return null;
     } catch (error) {
-        console.error('Unexpected error in addRestaurant:', error);
-        alert('Váratlan hiba történt az étterem hozzáadásakor.');
+        console.error('Error in addRestaurant:', error);
+        alert('Hiba történt az étterem mentésekor. Kérjük, próbáld újra később.');
         return null;
     }
   };
@@ -277,36 +307,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     alert("Restaurant deleting not implemented with Supabase yet.");
   };
 
-  const addReview = async (reviewData: Omit<Review, 'id' | 'createdAt' | 'userId'>): Promise<void> => {
+  const addReview = async (reviewData: Omit<Review, 'id' | 'created_at' | 'user_id'>): Promise<void> => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         console.error("User not logged in to add review");
-        // Optionally: Trigger login flow or show a message
         alert('A vélemény hozzáadásához be kell jelentkezned.');
         return;
       }
-
-      // Prepare data for Supabase (map restaurantId to restaurant_id, add user_id)
-      // Ensure required fields like rating are present in reviewData
+      
+      // Prepare data for Supabase
       const dataToInsert = {
         ...reviewData,
-        restaurant_id: reviewData.restaurantId,
         user_id: user.id,
-        // Explicitly handle optional fields like message, dishes, photos if needed
-        message: reviewData.message || null, // Use null if empty string is not desired
-        dishes: reviewData.dishes || [], // Default to empty array if undefined/null
-        photos: reviewData.photos || [], // Default to empty array if undefined/null
+        message: reviewData.message || null,
+        dishes: reviewData.dishes || [],
+        photos: reviewData.photos || [],
+        atmosphere_rating: reviewData.atmosphere_rating || null,
+        taste_rating: reviewData.taste_rating || null,
+        price_rating: reviewData.price_rating || null
       };
-      // Remove the client-side restaurantId before inserting
-      delete (dataToInsert as any).restaurantId;
 
-      // Insert into 'reviews' table and select the inserted row
+      // Insert into 'reviews' table and select the inserted row with all fields
       const { data, error } = await supabase
         .from('reviews')
         .insert(dataToInsert)
-        .select()
-        .single(); // Use single() if you expect exactly one row back
+        .select(`
+          id,
+          restaurant_id,
+          user_id,
+          rating,
+          average_rating,
+          atmosphere_rating,
+          taste_rating,
+          price_rating,
+          message,
+          dishes,
+          photos,
+          created_at,
+          updated_at,
+          dish_prices
+        `)
+        .single();
 
       if (error) {
         console.error('Error adding review:', error);
@@ -316,38 +358,145 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       // Update local state with the newly added review from the database response
       if (data) {
+        console.log('Received review data:', data); // Debug log
+        
         // Map the database response back to the Review type
         const newReview: Review = {
-            ...data,
-            restaurantId: data.restaurant_id, // Map back to camelCase
-            userId: data.user_id // Map back to camelCase
+          id: data.id,
+          restaurant_id: data.restaurant_id,
+          user_id: data.user_id,
+          rating: data.rating,
+          average_rating: data.average_rating,
+          atmosphere_rating: data.atmosphere_rating,
+          taste_rating: data.taste_rating,
+          price_rating: data.price_rating,
+          message: data.message,
+          dishes: data.dishes || [],
+          photos: data.photos || [],
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          dish_prices: data.dish_prices
         };
-        setReviews(prev => [newReview, ...prev]); // Add to the beginning of the list for immediate visibility
+        
+        console.log('Mapped review data:', newReview); // Debug log
+        setReviews(prev => [newReview, ...prev]);
         console.log('Review added successfully and state updated');
       } else {
-          console.warn("Review added but no data returned from Supabase?");
-          // Optionally refetch reviews as a fallback
-          // await fetchReviews().then(setReviews);
+        console.warn("Review added but no data returned from Supabase?");
       }
 
     } catch (error) {
-        console.error('Unexpected error in addReview:', error);
-        alert('Váratlan hiba történt a vélemény hozzáadásakor.');
+      console.error('Unexpected error in addReview:', error);
+      alert('Váratlan hiba történt a vélemény hozzáadásakor.');
     }
   };
 
   const updateReview = async (review: Review): Promise<void> => {
-    console.log("updateReview needs Supabase implementation");
-    alert("Review updating not implemented with Supabase yet.");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("User not logged in to update review");
+        alert('A vélemény módosításához be kell jelentkezned.');
+        return;
+      }
+
+      // Calculate average rating from valid ratings
+      const ratings = [
+        review.atmosphere_rating || 0,
+        review.taste_rating || 0,
+        review.price_rating || 0
+      ].filter(r => r > 0);
+      
+      const averageRating = ratings.length > 0 
+        ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length 
+        : review.rating;
+
+      // Prepare data for Supabase update (snake_case keys, null for empty optionals)
+      const dataToUpdate = {
+        rating: review.rating,
+        average_rating: averageRating,
+        atmosphere_rating: review.atmosphere_rating ?? null,
+        taste_rating: review.taste_rating ?? null,
+        price_rating: review.price_rating ?? null,
+        message: review.message ?? null,
+        dishes: review.dishes || [],
+        photos: review.photos || [],
+        updated_at: new Date().toISOString()
+      };
+
+      // Update the review in Supabase
+      const { error } = await supabase
+        .from('reviews')
+        .update(dataToUpdate)
+        .eq('id', review.id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating review:', error);
+        alert(`Hiba történt a vélemény módosításakor: ${error.message}`);
+        return;
+      }
+
+      // Update local state, ensuring consistency with Review type
+      setReviews(prev => prev.map(r =>
+        r.id === review.id
+          ? {
+              ...r,
+              rating: dataToUpdate.rating,
+              average_rating: averageRating,
+              atmosphere_rating: dataToUpdate.atmosphere_rating ?? undefined,
+              taste_rating: dataToUpdate.taste_rating ?? undefined,
+              price_rating: dataToUpdate.price_rating ?? undefined,
+              message: dataToUpdate.message ?? undefined,
+              dishes: dataToUpdate.dishes,
+              photos: dataToUpdate.photos,
+              updated_at: dataToUpdate.updated_at,
+            }
+          : r
+      ));
+      
+      console.log('Review updated successfully and state updated');
+
+    } catch (error) {
+      console.error('Unexpected error in updateReview:', error);
+      alert('Váratlan hiba történt a vélemény módosításakor.');
+    }
   };
 
   const deleteReview = async (id: string): Promise<void> => {
-    console.log("deleteReview needs Supabase implementation");
-    alert("Review deleting not implemented with Supabase yet.");
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error("User not logged in to delete review");
+        alert('A vélemény törléséhez be kell jelentkezned.');
+        return;
+      }
+
+      // Delete the review from Supabase
+      const { error } = await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id); // Ensure user can only delete their own reviews
+
+      if (error) {
+        console.error('Error deleting review:', error);
+        alert(`Hiba történt a vélemény törlésekor: ${error.message}`);
+        return;
+      }
+
+      // Update local state by removing the deleted review
+      setReviews(prev => prev.filter(review => review.id !== id));
+      console.log('Review deleted successfully and state updated');
+
+    } catch (error) {
+      console.error('Unexpected error in deleteReview:', error);
+      alert('Váratlan hiba történt a vélemény törlésekor.');
+    }
   };
 
-  const getRestaurantReviews = (restaurantId: string) => {
-    return reviews.filter((review) => review.restaurantId === restaurantId);
+  const getRestaurantReviews = (restaurantId: string): Review[] => {
+    return reviews.filter((review) => review.restaurant_id === restaurantId);
   };
 
   return (

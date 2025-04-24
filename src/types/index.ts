@@ -4,23 +4,26 @@ export interface Restaurant {
   address: string;
   priceTier: 1 | 2 | 3;
   createdAt: string;
+  userId?: string;
   dishes?: string[];
   photoUrl?: string;
 }
 
 export interface Review {
   id: string;
-  restaurantId: string;
+  user_id: string;
+  restaurant_id: string;
   rating: number;
-  message: string;
-  dishes: string[];
-  photos: string[];
-  createdAt: string;
-  user_id?: string;
+  average_rating: number;
+  atmosphere_rating?: number;
+  taste_rating?: number;
+  price_rating?: number;
+  message?: string;
+  photos?: string[];
+  dishes?: string[];
+  created_at: string;
+  updated_at: string;
   dish_prices?: DishPrice[];
-  upvotes?: number;
-  downvotes?: number;
-  user_vote?: number;
 }
 
 export interface DishPrice {

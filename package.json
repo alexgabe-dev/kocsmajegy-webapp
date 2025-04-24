@@ -12,12 +12,14 @@
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.0",
     "@supabase/supabase-js": "^2.39.7",
+    "base64-arraybuffer": "^1.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^11.0.8",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.5.2",
     "react-router-dom": "^6.22.3",
     "tailwind-merge": "^3.2.0",
     "tailwindcss-animate": "^1.0.7"

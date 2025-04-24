@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 interface ConfirmDialogProps {
@@ -10,6 +10,7 @@ interface ConfirmDialogProps {
   confirmType?: 'danger' | 'primary';
   onConfirm: () => void;
   onCancel: () => void;
+  onClose?: () => void;
 }
 
 const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
@@ -21,8 +22,21 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   confirmType = 'primary',
   onConfirm,
   onCancel,
+  onClose,
 }) => {
+  const [showRatingDetails, setShowRatingDetails] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleCancel = () => {
+    onCancel();
+    if (onClose) onClose();
+  };
+
+  const handleConfirm = () => {
+    onConfirm();
+    if (onClose) onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 animate-fadeIn">
@@ -39,13 +53,13 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <p className="text-gray-600 dark:text-gray-300 mb-5 text-base leading-relaxed">{message}</p>
           <div className="flex justify-end space-x-3">
             <button
-              onClick={onCancel}
+              onClick={handleCancel}
               className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium"
             >
               {cancelText}
             </button>
             <button
-              onClick={onConfirm}
+              onClick={handleConfirm}
               className={`px-4 py-2 rounded-lg text-white font-medium shadow-sm button-effect ${
                 confirmType === 'danger'
                   ? 'bg-red-500 hover:bg-red-600'
