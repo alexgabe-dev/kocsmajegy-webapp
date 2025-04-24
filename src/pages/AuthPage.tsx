@@ -32,12 +32,15 @@ const AuthPage: React.FC = () => {
       if (isResetPassword) {
         // Handle password reset
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth?reset=true`,
+          // Expliciten megadjuk az átirányítási URL-t
+          redirectTo: 'https://kocsmajegy-app.vercel.app/reset-password',
         });
         
-        if (error) throw error;
-        
-        setSuccess('Jelszó visszaállítási email elküldve. Kérjük, ellenőrizd a postaládádat.');
+        if (error) {
+          setError(`Hiba a jelszó-visszaállítási email küldésekor: ${error.message}`);
+        } else {
+          setSuccess('Jelszó visszaállítási email elküldve. Kérjük, ellenőrizd a postaládádat.');
+        }
         setLoading(false);
         return;
       }
