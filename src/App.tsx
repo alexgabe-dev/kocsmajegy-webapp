@@ -20,27 +20,40 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    // Ellenőrizzük az URL-t jelszó-visszaállítási tokenre az elején
+    const isRecovery = window.location.hash.includes('type=recovery');
+
+    // Kezdeti session lekérése
+    supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
+      // Csak akkor állítjuk be a kezdeti sessiont, ha NEM vagyunk recovery módban
+      if (!isRecovery) {
+        setSession(initialSession);
+      }
+      // Itt állítjuk be a loading false-t, miután eldőlt, kell-e session
       setLoading(false);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false);
-    });
+    // Figyeljük az auth állapot változásait
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, currentSession) => {
+        // Az eseménykezelő mindig frissítse a sessiont, a ResetPasswordPage majd kezeli a saját állapotát
+        setSession(currentSession);
+        // Itt már nem kell a setLoading(false), elég a kezdeti betöltésnél
+      }
+    );
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []); // Az üres dependency array itt helyes
 
+  // Betöltési állapot kezelése
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="h-8 w-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
-    );
+    ); // Vagy egy dedikált betöltő komponens
   }
 
   return (
