@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import { ToastProvider } from './context/ToastContext';
@@ -10,15 +10,16 @@ import ProfilePage from './pages/ProfilePage';
 import SearchPage from './pages/SearchPage';
 import FavoritesPage from './pages/FavoritesPage';
 import AddRestaurantPage from './pages/AddRestaurantPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import MobileNav from './components/MobileNav';
 import './index.css';
+import { Session } from '@supabase/supabase-js';
 
 function App() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and subscribe to auth changes
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
@@ -28,6 +29,7 @@ function App() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -49,7 +51,11 @@ function App() {
             <Routes>
               <Route
                 path="/auth"
-                element={session ? <Navigate to="/" replace /> : <AuthPage />}
+                element={!session ? <AuthPage /> : <Navigate to="/" replace />}
+              />
+              <Route
+                path="/reset-password"
+                element={<ResetPasswordPage />}
               />
               <Route
                 path="/"
