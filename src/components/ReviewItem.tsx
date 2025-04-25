@@ -232,40 +232,62 @@ const ReviewItem: React.FC<ReviewItemProps> = ({
   }, []);
 
   const fetchUserData = async (userId: string) => {
-    try {
-      // First try to get from profile_images
-      const { data: imageData, error: imageError } = await supabase
-        .from('profile_images')
-        .select('image_data')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+  try {
+    // First try to get from profile_images
+    const { data: images, error: imageError } = await supabase
+      .from('profile_images')
+      .select('image_data')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-      if (!imageError && imageData?.image_data) {
-        setUserAvatar(imageData.image_data);
+    let imageData: string | null = null;
+    if (!imageError && images && images.length > 0 && images[0].image_data) {
+      imageData = images[0].image_data;
+      // Add base64 prefix if missing
+      if (imageData.startsWith('data:image/')) {
+        setUserAvatar(imageData);
+      } else {
+        // Try to detect mime type (default to jpeg)
+        let prefix = 'data:image/jpeg;base64,';
+        if (imageData.charAt(0) === '/') {
+          // PNG base64 usually starts with iVBORw
+          prefix = 'data:image/png;base64,';
+        }
+        setUserAvatar(prefix + imageData);
       }
-
-      // Then get user profile data
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('username, email, avatar_url')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        console.error('Error fetching profile data:', profileError);
-        return;
-      }
-
-      setUserName(profileData?.username || profileData?.email || 'Felhasználó');
-      if (!imageData?.image_data && profileData?.avatar_url) {
-        setUserAvatar(profileData.avatar_url);
-      }
-    } catch (error) {
-      console.error('Error in fetchUserData:', error);
     }
-  };
+
+    // Then get user profile data
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('username, email, avatar_url')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      console.error('Error fetching profile data:', profileError);
+      return;
+    }
+
+    setUserName(profileData?.username || profileData?.email || 'Felhasználó');
+    if (!imageData && profileData?.avatar_url) {
+      // Add prefix if missing
+      let avatarUrl = profileData.avatar_url;
+      if (avatarUrl.startsWith('data:image/')) {
+        setUserAvatar(avatarUrl);
+      } else {
+        let prefix = 'data:image/jpeg;base64,';
+        if (avatarUrl.charAt(0) === '/') {
+          prefix = 'data:image/png;base64,';
+        }
+        setUserAvatar(prefix + avatarUrl);
+      }
+    }
+  } catch (error) {
+    console.error('Error in fetchUserData:', error);
+  }
+};
 
   const handleVote = async (type: 'up' | 'down') => {
     if (!currentUser) {
