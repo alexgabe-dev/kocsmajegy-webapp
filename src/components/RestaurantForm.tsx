@@ -13,6 +13,7 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({
 }) => {
   const [name, setName] = useState(initialData.name || '');
   const [address, setAddress] = useState(initialData.address || '');
+  const [description, setDescription] = useState(initialData.description || '');
   const [priceTier, setPriceTier] = useState<PriceTier>(initialData.priceTier || 1);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -38,50 +39,67 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({
       onSubmit({
         name,
         address,
+        description,
         priceTier,
       });
     }
   };
 
+  const buttonClasses = "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 w-full";
+
+  const inputClasses = (hasError: boolean): string =>
+    `w-full px-3 py-2 rounded-lg bg-zinc-700 border text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent ${ 
+      hasError ? 'border-red-500' : 'border-zinc-600'
+    }`;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-          Restaurant Name
+        <label htmlFor="name" className="block text-sm font-medium text-zinc-300 mb-1">
+          Hely neve
         </label>
         <input
           id="name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-            errors.name ? 'border-red-500' : 'border-gray-300'
-          }`}
-          placeholder="Enter restaurant name"
+          className={inputClasses(!!errors.name)}
+          placeholder="Pl. Arany Oroszlán"
         />
         {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
       </div>
       
       <div>
-        <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-          Address
+        <label htmlFor="address" className="block text-sm font-medium text-zinc-300 mb-1">
+          Cím
         </label>
         <input
           id="address"
           type="text"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 ${
-            errors.address ? 'border-red-500' : 'border-gray-300'
-          }`}
-          placeholder="Enter restaurant address"
+          className={inputClasses(!!errors.address)}
+          placeholder="Pl. Budapest, Fő utca 1."
         />
         {errors.address && <p className="mt-1 text-sm text-red-500">{errors.address}</p>}
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Price Range
+        <label htmlFor="description" className="block text-sm font-medium text-zinc-300 mb-1">
+          Leírás (opcionális)
+        </label>
+        <textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className={`${inputClasses(false)} min-h-[80px]`}
+          placeholder="Rövid leírás, hangulat, jellemzők..."
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1">
+          Árkategória
         </label>
         <PriceTierComponent
           tier={priceTier}
@@ -92,9 +110,9 @@ const RestaurantForm: React.FC<RestaurantFormProps> = ({
       <div className="pt-2">
         <button
           type="submit"
-          className="w-full py-2 px-4 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors duration-200"
+          className={buttonClasses}
         >
-          Save Restaurant
+          Hely mentése
         </button>
       </div>
     </form>

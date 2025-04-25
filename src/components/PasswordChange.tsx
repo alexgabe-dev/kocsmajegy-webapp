@@ -77,6 +77,10 @@ const PasswordChange: React.FC<PasswordChangeProps> = () => {
     }
   };
 
+  const buttonClasses = "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400";
+  const inputClasses = "block w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-50";
+  const inputIconClasses = "absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-zinc-400";
+
   const PasswordInput = ({ 
     id, 
     label, 
@@ -93,30 +97,32 @@ const PasswordChange: React.FC<PasswordChangeProps> = () => {
     onToggleShow: () => void;
   }) => (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+      <label htmlFor={id} className="block text-sm font-medium text-zinc-300 mb-1">
         {label}
       </label>
       <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Lock size={16} className="text-gray-400" />
+        <div className={inputIconClasses}>
+          <Lock size={16} />
         </div>
         <input
           id={id}
-          type={showPassword ? "text" : "password"}
+          type={showPassword ? 'text' : 'password'}
           value={value}
           onChange={onChange}
-          className="w-full pl-10 pr-10 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
-          required
+          className={`${inputClasses} pl-10 pr-10`}
+          placeholder="••••••••"
         />
         <button
           type="button"
-          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           onClick={onToggleShow}
+          className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5"
+          aria-label={showPassword ? "Jelszó elrejtése" : "Jelszó megjelenítése"} 
+          tabIndex={-1}
         >
           {showPassword ? (
-            <EyeOff size={16} />
+            <EyeOff size={16} className="text-zinc-400 hover:text-zinc-300" />
           ) : (
-            <Eye size={16} />
+            <Eye size={16} className="text-zinc-400 hover:text-zinc-300" />
           )}
         </button>
       </div>
@@ -155,23 +161,14 @@ const PasswordChange: React.FC<PasswordChangeProps> = () => {
 
         <motion.button
           type="submit"
+          className={`${buttonClasses} w-full flex items-center justify-center gap-2 mt-6`}
           disabled={loading}
           whileTap={{ scale: 0.98 }}
-          className={`w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium flex items-center justify-center space-x-2 ${
-            loading ? 'opacity-70 cursor-not-allowed' : ''
-          }`}
         >
           {loading ? (
-            <>
-              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Folyamatban...</span>
-            </>
-          ) : (
-            <>
-              <Lock size={18} />
-              <span>Jelszó megváltoztatása</span>
-            </>
-          )}
+            <div className="h-4 w-4 border-t-2 border-b-2 border-white rounded-full animate-spin"></div>
+          ) : null} 
+          <span>{loading ? 'Mentés...' : 'Jelszó mentése'}</span>
         </motion.button>
       </form>
     </div>

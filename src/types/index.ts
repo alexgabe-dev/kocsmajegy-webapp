@@ -2,6 +2,7 @@ export interface Restaurant {
   id: string;
   name: string;
   address: string;
+  description?: string;
   priceTier: 1 | 2 | 3;
   createdAt: string;
   userId?: string;

@@ -12,13 +12,19 @@ interface ProfileSettingsProps {
 const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onProfileUpdate }) => {
   const [username, setUsername] = useState(user.user_metadata?.username || '');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
+  const [success, setSuccess] = useState<string | null>(null); // Use null for initial state
+  const [error, setError] = useState<string | null>(null); // Use null for initial state
+
+  // Common button style from HomePage/AuthPage
+  const buttonClasses = "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400";
+  // Input style for dark theme
+  const inputClasses = "block w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 disabled:cursor-not-allowed disabled:opacity-50";
+  const inputIconClasses = "absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-zinc-400";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
+    setError(null);
+    setSuccess(null);
     setLoading(true);
 
     try {
@@ -45,7 +51,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onProfileUpdate
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg text-sm"
+          // Dark theme error message style
+          className="p-3 bg-red-900/30 border border-red-700 text-red-400 rounded-lg text-sm"
         >
           {error}
         </motion.div>
@@ -55,7 +62,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onProfileUpdate
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-600 dark:text-green-400 rounded-lg text-sm"
+          // Dark theme success message style
+          className="p-3 bg-green-900/30 border border-green-700 text-green-400 rounded-lg text-sm"
         >
           {success}
         </motion.div>
@@ -64,59 +72,53 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onProfileUpdate
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Username */}
         <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="username" className="block text-sm font-medium text-zinc-300 mb-1">
             Felhasználónév
           </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <UserIcon size={16} className="text-gray-400" />
+            <div className={inputIconClasses}>
+              <UserIcon size={16} />
             </div>
             <input
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full pl-10 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+              // Apply dark input style, add pl-10 for icon
+              className={`${inputClasses} pl-10`} 
               placeholder="Add meg a felhasználóneved"
             />
           </div>
         </div>
 
         {/* Email (read-only) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <div className="pt-2"> {/* Added padding top for separation */}
+          <label className="block text-sm font-medium text-zinc-300 mb-1">
             Email cím
           </label>
           <input
             type="email"
             value={user.email || ''}
             readOnly
-            className="w-full py-2 px-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+            // Apply dark input style, make background slightly different for read-only
+            className={`${inputClasses} bg-zinc-800 cursor-not-allowed`} 
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-xs text-zinc-400">
             Az email cím nem módosítható
           </p>
         </div>
 
         <motion.button
           type="submit"
+          // Apply orange gradient button style
+          className={`${buttonClasses} w-full flex items-center justify-center gap-2 mt-6`} // Added gap and margin-top
           disabled={loading}
           whileTap={{ scale: 0.98 }}
-          className={`w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors font-medium flex items-center justify-center space-x-2 ${
-            loading ? 'opacity-70 cursor-not-allowed' : ''
-          }`}
         >
           {loading ? (
-            <>
-              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              <span>Feldolgozás...</span>
-            </>
-          ) : (
-            <>
-              <Save size={18} />
-              <span>Mentés</span>
-            </>
-          )}
+            <div className="h-4 w-4 border-t-2 border-b-2 border-white rounded-full animate-spin"></div>
+          ) : (<Save size={18} />)} 
+          <span>{loading ? 'Mentés...' : 'Mentés'}</span>
         </motion.button>
       </form>
     </div>

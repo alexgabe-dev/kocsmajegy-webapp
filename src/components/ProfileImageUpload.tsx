@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Camera, X, Upload } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Camera, Loader2, Eye, UploadCloud } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 
 interface ProfileImageUploadProps {
@@ -9,43 +10,29 @@ interface ProfileImageUploadProps {
 
 const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({ userId, onImageChange }) => {
   const [uploading, setUploading] = useState(false);
-  const [showUploadArea, setShowUploadArea] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null); // menuRef removed
 
-  // Fetch existing profile image on component mount
+
   useEffect(() => {
     const fetchProfileImage = async () => {
       try {
-        // Először próbáljuk meg a get_profile_image funkciót használni
-        const { data: functionData, error: functionError } = await supabase.rpc(
-          'get_profile_image',
-          { user_uuid: userId }
-        );
-        
-        if (functionError) {
-          console.error('Error fetching profile image with function:', functionError);
-          
-          // Ha a funkció nem működik, próbáljuk meg közvetlenül lekérdezni
-          const { data, error } = await supabase
-            .from('profile_images')
-            .select('image_data')
-            .eq('user_id', userId)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-            .single();
-            
-          if (error) {
-            console.error('Error fetching profile image:', error);
-            return;
-          }
-          
-          if (data?.image_data) {
-            setProfileImage(data.image_data);
-            onImageChange(data.image_data);
-          }
-        } else if (functionData) {
-          setProfileImage(functionData);
-          onImageChange(functionData);
+        // Always use the fallback query for reliability
+        const { data, error } = await supabase
+          .from('profile_images')
+          .select('image_data')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+        if (error) {
+          console.error('Error fetching profile image:', error);
+          return;
+        }
+        if (data?.image_data) {
+          setProfileImage(data.image_data);
+          onImageChange(data.image_data);
         }
       } catch (error) {
         console.error('Error in fetchProfileImage:', error);
@@ -61,17 +48,14 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({ userId, onImage
     try {
       setUploading(true);
       
-      // Get the MIME type from the file
       const mimeType = file.type;
       
-      // Konvertáljuk a képet base64 formátumba
       const reader = new FileReader();
       
       reader.onload = async (e) => {
         if (e.target?.result) {
           const base64Image = e.target.result as string;
           
-          // Mentsük el a képet a profile_images táblában
           const { error } = await supabase
             .from('profile_images')
             .insert({
@@ -87,10 +71,8 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({ userId, onImage
             return;
           }
           
-          // Frissítsük a képet a UI-n
           setProfileImage(base64Image);
           onImageChange(base64Image);
-          setShowUploadArea(false);
         }
       };
       
@@ -107,7 +89,6 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({ userId, onImage
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
-      // Ellenőrizzük a fájl méretét (max 1MB)
       if (file.size > 1 * 1024 * 1024) {
         alert('A fájl mérete nem lehet nagyobb, mint 1MB');
         return;
@@ -117,72 +98,96 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({ userId, onImage
     }
   };
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+    setIsMenuOpen(false);
+  };
+
+  const handleViewClick = () => {
+    console.log('View profile picture clicked');
+    setIsMenuOpen(false);
+  };
+
   return (
     <div className="relative">
-      {/* Avatar display */}
-      <div className="h-24 w-24 rounded-full bg-white dark:bg-gray-700 border-4 border-white dark:border-gray-700 overflow-hidden shadow-lg">
+      <div
+        onClick={() => !uploading && setIsMenuOpen(!isMenuOpen)}
+        className={`
+          relative h-32 w-32 rounded-full
+          border-4 border-zinc-800 overflow-hidden shadow-lg
+          ${!uploading ? 'cursor-pointer' : 'cursor-default opacity-70'}
+        `}
+      >
         {profileImage ? (
           <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
         ) : (
-          <div className="h-full w-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-            <Camera size={40} className="text-gray-400" />
+          <div className="h-full w-full flex items-center justify-center bg-zinc-700">
+            <Camera size={48} className="text-zinc-500" />
+          </div>
+        )}
+        {uploading && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <Loader2 size={32} className="text-orange-500 animate-spin" />
           </div>
         )}
       </div>
-      
-      {/* Upload button */}
-      <button 
-        className="absolute bottom-0 right-0 bg-amber-500 text-white p-1.5 rounded-full shadow-md hover:bg-amber-600 transition-colors"
-        onClick={() => setShowUploadArea(!showUploadArea)}
-        disabled={uploading}
-        aria-label="Profilkép módosítása"
-      >
-        {uploading ? (
-          <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <Camera size={16} />
-        )}
-      </button>
-      
-      {/* Upload area (shown when button is clicked) */}
-      {showUploadArea && (
-        <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl p-4 z-10 border border-gray-200 dark:border-gray-700">
-          <button 
-            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            onClick={() => setShowUploadArea(false)}
-          >
-            <X size={16} />
-          </button>
-          
-          <div className="text-center">
-            <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-              Válassz új profilképet
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-              Maximum méret: 1MB
-            </p>
-            
-            <input
-              id="profile-image-upload"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
-              disabled={uploading}
+
+      <AnimatePresence>
+        {isMenuOpen && !uploading && (
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/30 backdrop-blur-sm z-10"
+              onClick={() => setIsMenuOpen(false)}
             />
-            
-            <label
-              htmlFor="profile-image-upload"
-              className={`block w-full px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg cursor-pointer transition-colors ${
-                uploading ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+            <motion.div
+              key="menu"
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-[calc(100vw-2rem)] max-w-xs sm:w-56 bg-zinc-800 rounded-lg shadow-xl z-20 border border-zinc-700 overflow-hidden"
             >
-              {uploading ? 'Feltöltés...' : 'Tallózás'}
-            </label>
-          </div>
-        </div>
-      )}
+              <ul className="py-1 text-sm text-zinc-200">
+                {profileImage && (
+                  <li>
+                    <button
+                      onClick={handleViewClick}
+                      className="w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-zinc-700 transition-colors"
+                    >
+                      <Eye size={16} className="text-orange-500" />
+                      Profilkép megtekintése
+                    </button>
+                  </li>
+                )}
+                <li>
+                  <button
+                    onClick={handleUploadClick}
+                    className="w-full text-left px-4 py-2 flex items-center gap-3 hover:bg-zinc-700 transition-colors"
+                  >
+                    <UploadCloud size={16} className="text-orange-500" />
+                    Új profilkép feltöltése
+                  </button>
+                </li>
+              </ul>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <input
+        type="file"
+        id="profile-image-upload"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/png, image/jpeg, image/webp"
+        className="hidden"
+        disabled={uploading}
+      />
     </div>
   );
 };

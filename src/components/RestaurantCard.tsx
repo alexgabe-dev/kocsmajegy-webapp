@@ -50,46 +50,48 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       onClick={onClick}
-      className="rounded-lg overflow-hidden cursor-pointer bg-card shadow-md flex flex-col h-full transition-transform duration-200 hover:scale-[1.02] card-hover border border-border group"
+      // Modern dark theme styling
+      className="rounded-lg overflow-hidden cursor-pointer bg-zinc-800 shadow-lg flex flex-col h-full transition-all duration-300 hover:scale-[1.02] hover:shadow-orange-900/30 border border-zinc-700 group"
     >
-      <div className="relative h-52 sm:h-60 bg-secondary flex items-center justify-center">
+      <div className="relative h-52 sm:h-60 bg-zinc-700 flex items-center justify-center overflow-hidden"> {/* Darker placeholder bg */}
         {firstPhoto ? (
           <img
             src={firstPhoto}
             alt={restaurant.name}
-            className="w-full h-full object-cover group-hover:brightness-95 transition-all duration-200"
+            className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300 ease-in-out"
           />
         ) : (
           <div className="flex flex-col items-center justify-center w-full h-full">
-            <ImageIcon className="w-16 h-16 text-muted-foreground mb-2" />
-            <span className="text-sm text-muted-foreground">No photo</span>
+            <ImageIcon className="w-16 h-16 text-zinc-500 mb-2" /> {/* Adjusted icon color */}
+            <span className="text-sm text-zinc-500">Nincs kép</span>
           </div>
         )}
         {restaurant.priceTier > 0 && (
-          <div className="absolute top-3 right-3 bg-primary text-primary-foreground text-xs font-semibold px-2 py-1 rounded-full shadow-md">
+          <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-600 to-orange-500 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-md">
             {displayPriceTier(restaurant.priceTier)}
           </div>
         )}
       </div>
 
-      <div className="p-4 text-foreground flex flex-col flex-1 gap-2">
-        <h3 className="text-lg font-semibold mb-1 truncate group-hover:text-primary transition-colors">
+      {/* Content Section - Adjusted text colors */}
+      <div className="p-4 text-zinc-200 flex flex-col flex-1 gap-2">
+        <h3 className="text-lg font-semibold mb-1 truncate group-hover:text-orange-400 transition-colors">
           {restaurant.name}
         </h3>
 
-        <div className="flex items-center text-sm text-muted-foreground mb-2 gap-1">
+        <div className="flex items-center text-sm text-zinc-400 mb-2 gap-1">
           <MapPin size={14} className="flex-shrink-0" />
           <p className="truncate">{restaurant.address}</p>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm gap-1 sm:gap-0">
-          <div className="flex items-center space-x-1 bg-accent text-accent-foreground px-2 py-0.5 rounded mb-1 sm:mb-0 shadow-sm">
+          <div className="flex items-center space-x-1 bg-zinc-700 text-yellow-400 px-2 py-0.5 rounded mb-1 sm:mb-0 shadow-sm">
             <Star size={14} className="fill-current text-yellow-400"/>
             <span className="font-medium">{averageRating.toFixed(1)}</span>
           </div>
 
-          <span className="text-muted-foreground">
-            {formatDateAdded(restaurant.createdAt || new Date().toISOString())} 
+          <span className="text-zinc-500"> {/* Adjusted date added color */}
+            {formatDateAdded(restaurant.createdAt || new Date().toISOString())}
           </span>
         </div>
       </div>

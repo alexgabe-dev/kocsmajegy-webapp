@@ -105,77 +105,88 @@ const ProfilePage: React.FC = () => {
     );
   }
 
+  // Common button style from HomePage/AuthPage
+  const buttonClasses = "inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-black disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400";
+
+  if (loading) {
+    return (
+      // Loading spinner on black background
+      <div className="flex justify-center items-center min-h-screen bg-black">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-amber-50 to-white dark:from-gray-900 dark:to-black pb-16 md:pb-0">
+    // Apply black background and light text color globally
+    <div className="min-h-screen w-full bg-black text-zinc-200 pb-16">
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Profile Header */}
+        {/* Profile Header - Dark theme */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-8"
+          // Use dark background, remove gradient header
+          className="bg-zinc-800 rounded-2xl shadow-xl overflow-hidden mb-8"
         >
-          <div className="relative h-32 bg-gradient-to-r from-amber-400 to-amber-600 dark:from-amber-600 dark:to-amber-800">
+          {/* Placeholder for potential banner image space, or just remove */}
+          <div className="relative h-16 bg-zinc-700">
             <div className="absolute -bottom-16 left-6">
               {user && (
-                <ProfileImageUpload 
+                <ProfileImageUpload
                   userId={user.id}
-                  onImageChange={() => {/* Nem használjuk, de szükséges prop */}}
+                  onImageChange={() => {}}
+                  // Add theme specific styling if needed within ProfileImageUpload
                 />
               )}
             </div>
           </div>
-          
+
           <div className="pt-20 pb-6 px-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h1 className="text-2xl font-bold text-white">
                   {user?.user_metadata?.username || 'Felhasználó'}
                 </h1>
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 mt-1">
+                <div className="flex items-center gap-2 text-zinc-400 mt-1">
                   <Mail size={16} />
                   <span>{user?.email}</span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-500 dark:text-gray-500 mt-1">
+                <div className="flex items-center gap-2 text-zinc-500 mt-1">
                   <Calendar size={16} />
                   <span>Csatlakozott: {new Date(user?.created_at || '').toLocaleDateString('hu-HU')}</span>
                 </div>
               </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors shadow-md self-start md:self-center"
-              >
-                <LogOut size={18} />
-                <span>Kijelentkezés</span>
-              </button>
             </div>
           </div>
         </motion.div>
-        
+
         <div className="grid md:grid-cols-2 gap-6">
-          {/* Profile Settings */}
+          {/* Profile Settings Section - Dark theme */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden"
+            // Dark background for the card
+            className="bg-zinc-800 rounded-2xl shadow-xl overflow-hidden"
           >
-            <button 
+            <button
               onClick={() => toggleSection('profile')}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              // Darker button background, lighter hover
+              className="w-full flex items-center justify-between p-4 hover:bg-zinc-700 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                  <Edit3 size={20} className="text-amber-600 dark:text-amber-400" />
-                </div>
-                <span className="font-medium text-gray-900 dark:text-white">Profil beállítások</span>
+                {/* Orange icon */}
+                <Edit3 size={20} className="text-orange-500" />
+                <span className="font-medium text-white">Profil beállítások</span>
               </div>
               <motion.div
                 animate={{ rotate: activeSection === 'profile' ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <ChevronDown size={20} className="text-gray-400" />
+                {/* Adjusted chevron color */}
+                <ChevronDown size={20} className="text-zinc-400" />
               </motion.div>
             </button>
-            
+
             <AnimatePresence>
               {activeSection === 'profile' && (
                 <motion.div
@@ -185,38 +196,42 @@ const ProfilePage: React.FC = () => {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 border-t border-gray-100 dark:border-gray-700">
+                  {/* Darker border */}
+                  <div className="p-4 border-t border-zinc-700">
+                    {/* ProfileSettings component might need internal styling updates */}
                     <ProfileSettings user={user!} onProfileUpdate={handleUpdateProfile} />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
-          
-          {/* Password Change */}
+
+          {/* Password Change Section - Dark theme */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden"
+            // Dark background for the card
+            className="bg-zinc-800 rounded-2xl shadow-xl overflow-hidden"
           >
-            <button 
+            <button
               onClick={() => toggleSection('password')}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              // Darker button background, lighter hover
+              className="w-full flex items-center justify-between p-4 hover:bg-zinc-700 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                  <Settings size={20} className="text-amber-600 dark:text-amber-400" />
-                </div>
-                <span className="font-medium text-gray-900 dark:text-white">Jelszó módosítása</span>
+                {/* Orange icon */}
+                <Settings size={20} className="text-orange-500" />
+                <span className="font-medium text-white">Jelszó módosítása</span>
               </div>
               <motion.div
                 animate={{ rotate: activeSection === 'password' ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <ChevronDown size={20} className="text-gray-400" />
+                {/* Adjusted chevron color */}
+                <ChevronDown size={20} className="text-zinc-400" />
               </motion.div>
             </button>
-            
+
             <AnimatePresence>
               {activeSection === 'password' && (
                 <motion.div
@@ -226,13 +241,26 @@ const ProfilePage: React.FC = () => {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="p-4 border-t border-gray-100 dark:border-gray-700">
-                    <PasswordChange onUpdatePassword={handleUpdatePassword} />
+                  {/* Darker border */}
+                  <div className="p-4 border-t border-zinc-700">
+                    {/* PasswordChange component might need internal styling updates */}
+                    <PasswordChange onPasswordUpdate={handleUpdatePassword} />
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
+        </div>
+
+        {/* Logout Button at the bottom */}
+        <div className="mt-12">
+          <button
+            onClick={handleLogout}
+            className={`${buttonClasses} w-full flex items-center justify-center gap-2`} // Full width, centered content
+          >
+            <LogOut size={18} />
+            <span>Kijelentkezés</span>
+          </button>
         </div>
       </div>
     </div>
